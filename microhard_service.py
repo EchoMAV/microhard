@@ -101,7 +101,7 @@ class MicrohardService:
         return f"{responses[0].strip()},{responses[1].strip()},{self.monark_id}"
 
     def change_monark_id(
-        self, encryption_key: str, new_monark_id
+        self, encryption_key: str, new_monark_id: int
     ) -> Tuple[bool, List[str]]:
         """
         Based on the incoming monark_id, the IP address of the microhard will be changed.
