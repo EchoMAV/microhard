@@ -28,44 +28,41 @@ class MONARK:
 
     def run(self):
         ret_msg = "Error."
-        ret_status = True
+        ret_status = False
         if self.action == ActionTypes.PAIR.value:
             if os.path.exists(PAIR_STATUS_FILE_PATH):
                 ret_msg = "Pairing is already in progress. Please wait."
             else:
-                subprocess.run(
+                subprocess.Popen(
                     [
                         "python",
                         "-c",
-                        f"from microhard_service import MicrohardService; MicrohardService().pair_monark('{self.network_id}', '{self.encryption_key}', {int(self.tx_power)}, {int(self.frequency)}, {int(self.monark_id)})",
-                    ]
+                        f"from microhard_service import MicrohardService; MicrohardService(action='pair').pair_monark('{self.network_id}', '{self.encryption_key}', {int(self.tx_power)}, {int(self.frequency)}, {int(self.monark_id)})",
+                    ],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
                 )
                 ret_msg = "Pairing has started."
+                ret_status = True
         elif self.action == ActionTypes.PAIR_STATUS.value:
             if os.path.exists(PAIR_STATUS_FILE_PATH):
                 with open(PAIR_STATUS_FILE_PATH, "r") as file:
                     ret_msg = file.readline().strip()
             else:
                 ret_msg = "Pairing is not in progress."
-                ret_status = False
-        elif self.action == ActionTypes.LOGIN.value:
-            is_valid_creds, _ = MicrohardService().login(
+            ret_status = True
+        elif self.action == ActionTypes.INFO.value:
+            ret_msg = MicrohardService(action=self.action).get_info(
                 encryption_key=self.encryption_key
             )
-            if is_valid_creds:
-                ret_msg = OK
-            else:
-                ret_msg = "Failed to login."
-                ret_status = False
-        elif self.action == ActionTypes.INFO.value:
-            ret_msg = MicrohardService().get_info(encryption_key=self.encryption_key)
+            ret_status = bool(ret_msg)
         elif self.action == ActionTypes.UPDATE_PARAM.value:
             _at_commands = []
             _ret_status1 = True
             _ret_status2 = True
 
             if self.monark_id:
-                _ret_status1, _ = MicrohardService().change_monark_id(
+                _ret_status1, _ = MicrohardService(action=self.action).change_monark_id(
                     encryption_key=self.encryption_key, monark_id=self.monark_id
                 )
 
@@ -75,12 +72,11 @@ class MONARK:
                 _at_commands.append(f"AT+MWFREQ={self.frequency}")
             if self.network_id:
                 _at_commands.append(f"AT+MWNETWORKID={self.network_id}")
-            if self.encryption_key:
-                _at_commands.append(f"AT+MSPWD={self.encryption_key}")
 
             if _at_commands:
-                _ret_status2, _ = MicrohardService().send_commands(
-                    encryption_key=self.encryption_key, at_commands=_at_commands
+                _at_commands.append("AT&W")
+                _ret_status2, _ = MicrohardService(action=self.action).send_commands(
+                    password=self.encryption_key, at_commands=_at_commands
                 )
 
             ret_status = _ret_status1 and _ret_status2
@@ -90,8 +86,8 @@ class MONARK:
                 ret_msg = "Failed to update parameters."
 
         elif self.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
-            ret_status, _ = MicrohardService().send_commands(
-                encryption_key=self.encryption_key,
+            ret_status, _ = MicrohardService(action=self.action).send_commands(
+                password=self.encryption_key,
                 at_commands=[
                     f"AT+MSPWD={self.new_encryption_key},{self.new_encryption_key}"
                 ],
@@ -102,6 +98,7 @@ class MONARK:
         else:
             raise ValueError(f"Invalid action type {self.action}.")
 
+        print({"is_success": ret_status, "message": ret_msg})
         return ret_status, ret_msg
 
 
@@ -138,13 +135,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--tx_power",
         type=int,
-        default="",
+        default=0,
         help="The transmission power (in dBm) for the Microhard radio.",
     )
     parser.add_argument(
         "--frequency",
         type=int,
-        default="",
+        default=0,
         help="The frequency (in MHz) for the Microhard radio.",
     )
     parser.add_argument(

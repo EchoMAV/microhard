@@ -1,5 +1,4 @@
 from typing import List, Tuple
-import paramiko
 import os
 import time
 from constants import (
@@ -10,16 +9,19 @@ from constants import (
     MICROHARD_USER,
     MONARK_ID_FILE_PATH,
     PAIR_STATUS_FILE_PATH,
+    ActionTypes,
 )
 import fcntl
+import paramiko
 
 
 class MicrohardService:
-    def __init__(self):
+    def __init__(self, action: str):
         # Set up the SSH client
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.monark_id = DEFAULT_ID
+        self.action = action
 
         # The MONARK ID determines which IP address to use for the microhard
         if os.path.exists(MONARK_ID_FILE_PATH):
@@ -30,7 +32,7 @@ class MicrohardService:
     def monark_ip(self) -> str:
         if self.monark_id == DEFAULT_ID:
             return MICROHARD_DEFAULT_IP
-        return f"{MICROHARD_IP_PREFIX}.{self.monark_id}0"
+        return f"{MICROHARD_IP_PREFIX}.{self.monark_id}"
 
     def _save_monark_id(self, monark_id: int):
         if monark_id > 10:
@@ -58,9 +60,9 @@ class MicrohardService:
             f"AT+MWVMODE=0",  # slave mode
             f"AT+MWTXPOWER={tx_power}",
             f"AT+MWNETWORKID={network_id}",
+            f"AT+MWFREQ={frequency}",
             f"AT+MWVENCRYPT=2,{encryption_key}",
             f"AT+MSPWD={encryption_key},{encryption_key}",
-            f"AT+MWFREQ={frequency}",
             f"AT+MNLAN=LAN,EDIT,0,{self.monark_ip},255.255.0.0,0",
             f"AT+MNLANDHCP=LAN,0",  # disable DHCP server
             "AT&W",  # save and write
@@ -78,15 +80,10 @@ class MicrohardService:
 
         return is_success, responses
 
-    def login(self, encryption_key: str) -> Tuple[bool, List[str]]:
-        return self.send_commands(
-            ip_address=self.monark_ip, password=encryption_key, at_commands=["AT"]
-        )
-
-    def get_info(self, encryption_key: str) -> str:
+    def get_info(self, encryption_key: str) -> dict:
         """
         Returns "{tx_power},{frequency},{monark_id}"
-        If any of the AT commands fail then it will return "No MONARK found."
+        If any of the AT commands fail then it will return error.
         """
         at_commands = [
             f"AT+MWTXPOWER",
@@ -96,9 +93,18 @@ class MicrohardService:
             ip_address=self.monark_ip, password=encryption_key, at_commands=at_commands
         )
         if not is_success:
-            return "No MONARK found."
+            return {}
 
-        return f"{responses[0].strip()},{responses[1].strip()},{self.monark_id}"
+        # format response to json
+        _tx_power = responses[0].split("MWTXPOWER: ")[1].strip()
+        _tx_power = _tx_power.split("dBm")[0].strip()
+        _frequency = responses[1].split("MWFREQ: ")[1].strip()
+        _frequency = _frequency.split("MHz")[0].strip()
+        return {
+            "tx_power": _tx_power,
+            "frequency": _frequency,
+            "monark_id": self.monark_id,
+        }
 
     def change_monark_id(
         self, encryption_key: str, new_monark_id: int
@@ -131,8 +137,14 @@ class MicrohardService:
                 ip_address = self.monark_ip
 
             # Connect to the Microhard radio
-            self.client.connect(ip_address, username=MICROHARD_USER, password=password)
-            print(f"Connected to {ip_address}")
+            try:
+                self.client.connect(
+                    ip_address, username=MICROHARD_USER, password=password
+                )
+                print(f"Connected to {ip_address}")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+                return False, [str(e)]
 
             # Start an interactive shell session
             shell = self.client.invoke_shell()
@@ -142,18 +154,23 @@ class MicrohardService:
 
             # Send AT commands
             i = 0
+            should_continue = True
             for command in at_commands:
+                if should_continue == False:
+                    break
                 i += 1
                 _status = f"{i}/{len(at_commands)}"
                 print(f"Running command {_status}")
-                with open(PAIR_STATUS_FILE_PATH, "w") as file:
-                    # Acquire an exclusive lock
-                    fcntl.flock(file, fcntl.LOCK_EX)
-                    try:
-                        file.write(_status + "\n")
-                    finally:
-                        # Release the lock
-                        fcntl.flock(file, fcntl.LOCK_UN)
+
+                if self.action == ActionTypes.PAIR.value:
+                    with open(PAIR_STATUS_FILE_PATH, "w") as file:
+                        # Acquire an exclusive lock
+                        fcntl.flock(file, fcntl.LOCK_EX)
+                        try:
+                            file.write(_status + "\n")
+                        finally:
+                            # Release the lock
+                            fcntl.flock(file, fcntl.LOCK_UN)
 
                 shell.send(command + "\n")
                 time.sleep(0.1)
@@ -161,18 +178,16 @@ class MicrohardService:
                 # We wait for "OK" to be returned before sending the next command (up to limit)
                 end_time = time.time() + 10
                 response = ""
-                has_failure = False
                 while time.time() < end_time:
                     if shell.recv_ready():
                         part = shell.recv(1024).decode()
                         response += part
                         # Check if the output contains a prompt or specific end marker
-                        if "OK" in part:
+                        if "\nOK\r" in part:
                             break
-                        elif (
-                            "ERROR" in part
-                        ):  # TODO will ERROR work -> what about if no auth?
-                            has_failure = True
+                        elif "ERROR" in part:
+                            should_continue = False
+                            print(f"Error occurred: {part}")
                             break
                     else:
                         time.sleep(0.1)
@@ -182,7 +197,7 @@ class MicrohardService:
             shell.close()
             self.client.close()
             print("Session closed.")
-            return not has_failure, responses
+            return should_continue, responses  # should_continue correlates to success
 
         except Exception as e:
             print(f"An error occurred: {e}")

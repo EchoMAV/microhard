@@ -16,30 +16,40 @@ class Validator:
 
     def _validate_args(self) -> bool:
         if not self.args:
-            return False
-        if not (self.validate_action(str(self.args.gcs_ip))):
-            return False
+            raise ValueError("No arguments provided")
 
-        if self.args.gcs_ip.action == ActionTypes.PAIR.value:
+        self.validate_action(str(self.args.action))
+        self.validate_encryption_key(
+            str(self.args.encryption_key), str(self.args.new_encryption_key)
+        )
+
+        if self.args.action == ActionTypes.PAIR.value:
             return self.all_fields_truthy(
                 ["network_id", "encryption_key", "tx_power", "frequency", "monark_id"]
             )
-        elif self.args.gcs_ip.action == ActionTypes.UPDATE_PARAM.value:
+        elif self.args.action == ActionTypes.UPDATE_PARAM.value:
             return self.all_fields_truthy(["encryption_key"]) and self.one_field_truthy(
                 ["network_id", "tx_power", "frequency", "monark_id"]
             )
-        elif self.args.gcs_ip.action in [
-            ActionTypes.LOGIN.value,
-            ActionTypes.INFO.value,
-        ]:
-            return self.all_fields_truthy(["encryption_key"])
-        elif self.args.gcs_ip.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
+        elif self.args.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
             return self.all_fields_truthy(["encryption_key", "new_encryption_key"])
-
-        return True
+        else:
+            return bool(self.args.action)
 
     def validate_action(self, action: str) -> bool:
-        return action in ActionTypes.__members__.values()
+        supported_actions = [a.value for a in ActionTypes.__members__.values()]
+        if not action in supported_actions:
+            raise ValueError(f"{action} not in {supported_actions}")
+        return True
+
+    def validate_encryption_key(
+        self, encryption_key: str, new_encryption_key: str
+    ) -> bool:
+        if encryption_key and not len(encryption_key) >= 8:
+            raise ValueError(f"Encryption key must be at least 8 characters long")
+        if new_encryption_key and not len(new_encryption_key) >= 8:
+            raise ValueError(f"New encryption key must be at least 8 characters long")
+        return True
 
     def all_fields_truthy(self, field_names: List[str]) -> bool:
         return all([bool(getattr(self.args, arg)) for arg in field_names])
