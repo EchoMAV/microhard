@@ -12,7 +12,8 @@ class Validator:
     def __init__(self, args: Optional[Any] = None) -> None:
         self.args = args
         if self.args:
-            self._validate_args()
+            if not self._validate_args():
+                raise Exception("Invalid arguments")
 
     def _validate_args(self) -> bool:
         if not self.args:
@@ -25,11 +26,11 @@ class Validator:
 
         if self.args.action == ActionTypes.PAIR.value:
             return self.all_fields_truthy(
-                ["network_id", "encryption_key", "tx_power", "frequency", "monark_id"]
+                ["network_id", "encryption_key", "tx_power", "frequency"]
             )
-        elif self.args.action == ActionTypes.UPDATE_PARAM.value:
+        elif self.args.action == ActionTypes.UPDATE.value:
             return self.all_fields_truthy(["encryption_key"]) and self.one_field_truthy(
-                ["network_id", "tx_power", "frequency", "monark_id"]
+                ["network_id", "tx_power", "frequency"]
             )
         elif self.args.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
             return self.all_fields_truthy(["encryption_key", "new_encryption_key"])
@@ -45,6 +46,9 @@ class Validator:
     def validate_encryption_key(
         self, encryption_key: str, new_encryption_key: str
     ) -> bool:
+        is_default_encryption_key = encryption_key == "admin"
+        if is_default_encryption_key:
+            return True
         if encryption_key and not len(encryption_key) >= 8:
             raise ValueError(f"Encryption key must be at least 8 characters long")
         if new_encryption_key and not len(new_encryption_key) >= 8:
@@ -52,7 +56,13 @@ class Validator:
         return True
 
     def all_fields_truthy(self, field_names: List[str]) -> bool:
-        return all([bool(getattr(self.args, arg)) for arg in field_names])
+        if not all([bool(getattr(self.args, arg)) for arg in field_names]):
+            raise ValueError(f"Missing fields: {field_names}")
+        return True
 
     def one_field_truthy(self, field_names: List[str]) -> bool:
-        return any([bool(getattr(self.args, arg)) for arg in field_names])
+        if not any([bool(getattr(self.args, arg)) for arg in field_names]):
+            raise ValueError(
+                f"Missing ate least one field from the following: {field_names}"
+            )
+        return True

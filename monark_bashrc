@@ -1,0 +1,14 @@
+# ~/.bashrc: executed by bash(1) for non-login shells.
+
+# Disable command history
+unset HISTFILE
+export HISTSIZE=0
+export HISTFILESIZE=0
+
+# check the window size after each command and, if necessary,
+# update the values of LINES and COLUMNS.
+shopt -s checkwinsize
+
+PS1='\w\$ '
+
+unset color_prompt force_color_prompt

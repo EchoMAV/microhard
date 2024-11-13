@@ -8,38 +8,73 @@ from constants import (
     MICROHARD_IP_PREFIX,
     MICROHARD_USER,
     MONARK_ID_FILE_PATH,
+    OK,
     PAIR_STATUS_FILE_PATH,
     ActionTypes,
 )
 import fcntl
 import paramiko
+import subprocess
+from functools import cached_property
 
 
 class MicrohardService:
-    def __init__(self, action: str):
+    def __init__(self, action: str, verbose: bool = False) -> None:
         # Set up the SSH client
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.monark_id = DEFAULT_ID
         self.action = action
+        self.verbose = verbose
 
-        # The MONARK ID determines which IP address to use for the microhard
-        if os.path.exists(MONARK_ID_FILE_PATH):
+        # The MONARK ID is set from the factory install and is between 1-255 (mavlink limit)
+        if not os.path.exists(MONARK_ID_FILE_PATH):
+            raise FileNotFoundError("MONARK ID file not found.")
+        else:
             with open(MONARK_ID_FILE_PATH, "r") as file:
                 self.monark_id = int(file.readline().strip())
 
-    @property
-    def monark_ip(self) -> str:
-        if self.monark_id == DEFAULT_ID:
-            return MICROHARD_DEFAULT_IP
+        if self.verbose:
+            print(f"MONARK ID: {self.monark_id}")
+
+    @cached_property
+    def paired_microhard_ip(self) -> str:
+        """
+        The intended provisioned microhard radio IP after pairing
+        """
         return f"{MICROHARD_IP_PREFIX}.{self.monark_id}"
 
-    def _save_monark_id(self, monark_id: int):
-        if monark_id > 10:
-            raise ValueError("Invalid MONARK ID. Must be between 1 and 10.")
-        self.monark_id = monark_id
-        with open(MONARK_ID_FILE_PATH, "w") as file:
-            file.write(str(self.monark_id))
+    @cached_property
+    def active_microhard_ip(self) -> str:
+        """
+        The current microhard radio IP (i.e. default or provisioned)
+        """
+        if self._is_default_microhard():
+            ip = MICROHARD_DEFAULT_IP
+        else:
+            ip = self.paired_microhard_ip
+
+        if self.verbose:
+            print(f"Active MONARK IP: {ip}")
+
+        return ip
+
+    def _is_default_microhard(self) -> bool:
+        """
+        Return True if 192.168.168.1 can be pinged
+        """
+        try:
+            # Ping the IP address and check for response within 200 ms
+            output = subprocess.run(
+                ["ping", "-c", "1", "-W", "200", MICROHARD_DEFAULT_IP],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            # Check if the ping was successful
+            return output.returncode == 0
+        except Exception as e:
+            print(f"Error: {e}")
+        return False
 
     def pair_monark(
         self,
@@ -47,36 +82,42 @@ class MicrohardService:
         encryption_key: str,
         tx_power: int,
         frequency: int,
-        monark_id: int,
     ) -> Tuple[bool, List[str]]:
-        print(f"Pairing Monark...")
-
-        # create the pairing lock file
+        # create the pairing status file
         with open(PAIR_STATUS_FILE_PATH, "w") as _:
             pass
 
         at_commands = [
             f"AT+MWRADIO=1",  # turn on radio
-            f"AT+MWVMODE=0",  # slave mode
+            f"AT+MWVMODE=1",  # slave mode
             f"AT+MWTXPOWER={tx_power}",
             f"AT+MWNETWORKID={network_id}",
             f"AT+MWFREQ={frequency}",
             f"AT+MWVENCRYPT=2,{encryption_key}",
             f"AT+MSPWD={encryption_key},{encryption_key}",
-            f"AT+MNLAN=LAN,EDIT,0,{self.monark_ip},255.255.0.0,0",
+            f"AT+MNLAN=LAN,EDIT,0,{self.paired_microhard_ip},255.255.0.0,0",  # the target paired IP
             f"AT+MNLANDHCP=LAN,0",  # disable DHCP server
             "AT&W",  # save and write
         ]
+
+        _password = (
+            MICROHARD_DEFAULT_PASSWORD
+            if self._is_default_microhard()
+            else encryption_key
+        )
+
         is_success, responses = self.send_commands(
-            ip_address=MICROHARD_DEFAULT_IP,
-            password=MICROHARD_DEFAULT_PASSWORD,
+            ip_address=self.active_microhard_ip,  # send to active microhard IP
+            password=_password,
             at_commands=at_commands,
         )
 
-        os.remove(PAIR_STATUS_FILE_PATH)
-
         if is_success:
-            self._save_monark_id(monark_id)
+            with open(PAIR_STATUS_FILE_PATH, "w") as file:
+                file.write(OK)
+        else:
+            with open(PAIR_STATUS_FILE_PATH, "w") as file:
+                file.write(f"FAILURE: {responses}")
 
         return is_success, responses
 
@@ -90,7 +131,9 @@ class MicrohardService:
             f"AT+MWFREQ",
         ]
         is_success, responses = self.send_commands(
-            ip_address=self.monark_ip, password=encryption_key, at_commands=at_commands
+            ip_address=self.active_microhard_ip,
+            password=encryption_key,
+            at_commands=at_commands,
         )
         if not is_success:
             return {}
@@ -106,25 +149,6 @@ class MicrohardService:
             "monark_id": self.monark_id,
         }
 
-    def change_monark_id(
-        self, encryption_key: str, new_monark_id: int
-    ) -> Tuple[bool, List[str]]:
-        """
-        Based on the incoming monark_id, the IP address of the microhard will be changed.
-        """
-        original_monark_id = self.monark_id
-        self._save_monark_id(new_monark_id)
-
-        at_command = f"AT+MNLAN=LAN,EDIT,0,{self.monark_ip},255.255.0.0,0"
-        is_success, responses = self.send_commands(
-            ip_address=self.monark_ip, password=encryption_key, at_commands=[at_command]
-        )
-
-        if not is_success:
-            self._save_monark_id(original_monark_id)
-
-        return is_success, responses
-
     def send_commands(
         self, password: str, at_commands: List[str], ip_address: str = ""
     ) -> Tuple[bool, List[str]]:
@@ -134,16 +158,18 @@ class MicrohardService:
         """
         try:
             if not ip_address:
-                ip_address = self.monark_ip
+                ip_address = self.active_microhard_ip
 
             # Connect to the Microhard radio
             try:
                 self.client.connect(
                     ip_address, username=MICROHARD_USER, password=password
                 )
-                print(f"Connected to {ip_address}")
+                if self.verbose:
+                    print(f"Connected to {ip_address}")
             except Exception as e:
-                print(f"An error occurred: {e}")
+                if self.verbose:
+                    print(f"Unable to Connect to Radio: {e}")
                 return False, [str(e)]
 
             # Start an interactive shell session
@@ -160,7 +186,9 @@ class MicrohardService:
                     break
                 i += 1
                 _status = f"{i}/{len(at_commands)}"
-                print(f"Running command {_status}")
+
+                if self.verbose:
+                    print(f"Running command {_status}")
 
                 if self.action == ActionTypes.PAIR.value:
                     with open(PAIR_STATUS_FILE_PATH, "w") as file:
@@ -176,7 +204,7 @@ class MicrohardService:
                 time.sleep(0.1)
 
                 # We wait for "OK" to be returned before sending the next command (up to limit)
-                end_time = time.time() + 10
+                end_time = time.time() + 15
                 response = ""
                 while time.time() < end_time:
                     if shell.recv_ready():
@@ -196,7 +224,8 @@ class MicrohardService:
 
             shell.close()
             self.client.close()
-            print("Session closed.")
+            if self.verbose:
+                print("Session closed.")
             return should_continue, responses  # should_continue correlates to success
 
         except Exception as e:
