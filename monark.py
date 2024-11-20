@@ -2,7 +2,7 @@ import argparse
 import os
 import sys
 import subprocess
-from constants import FAILURE, OK, PAIR_STATUS_FILE_PATH, ActionTypes
+from constants import DEFAULT_ID, FAILURE, OK, PAIR_STATUS_FILE_PATH, ActionTypes
 from microhard_service import MicrohardService
 from validator import Validator
 
@@ -16,6 +16,7 @@ class MONARK:
         new_encryption_key: str,
         tx_power: int,
         frequency: int,
+        monark_id: int,
         verbose: bool,
     ) -> None:
         self.action = action
@@ -24,6 +25,7 @@ class MONARK:
         self.new_encryption_key = new_encryption_key
         self.tx_power = tx_power
         self.frequency = frequency
+        self.monark_id = monark_id
         self.verbose = verbose
 
     def run(self):
@@ -52,7 +54,7 @@ class MONARK:
                     [
                         "python",
                         "-c",
-                        f"from microhard_service import MicrohardService; MicrohardService(action='pair', verbose={self.verbose}).pair_monark('{self.network_id}', '{self.encryption_key}', {int(self.tx_power)}, {int(self.frequency)})",
+                        f"from microhard_service import MicrohardService; MicrohardService(action='pair', verbose={self.verbose}, monark_id={self.monark_id}).pair_monark('{self.network_id}', '{self.encryption_key}', {int(self.tx_power)}, {int(self.frequency)})",
                     ],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
@@ -74,6 +76,9 @@ class MONARK:
         elif self.action == ActionTypes.UPDATE.value:
             _at_commands = []
             ret_status = True
+            microhard_service = MicrohardService(
+                action=self.action, verbose=self.verbose, monark_id=self.monark_id
+            )
 
             if self.tx_power:
                 _at_commands.append(f"AT+MWTXPOWER={self.tx_power}")
@@ -81,24 +86,24 @@ class MONARK:
                 _at_commands.append(f"AT+MWFREQ={self.frequency}")
             if self.network_id:
                 _at_commands.append(f"AT+MWNETWORKID={self.network_id}")
+            if self.monark_id != DEFAULT_ID:
+                _at_commands.append(
+                    f"AT+MNLAN=LAN,EDIT,0,{microhard_service.paired_microhard_ip},255.255.0.0,0"
+                )
 
             if _at_commands:
                 _at_commands.append("AT&W")
-                ret_status, _ = MicrohardService(
-                    action=self.action, verbose=self.verbose
-                ).send_commands(password=self.encryption_key, at_commands=_at_commands)
+                ret_status, _ = microhard_service.send_commands(
+                    password=self.encryption_key, at_commands=_at_commands
+                )
 
             if ret_status:
-                ret_msg = MicrohardService(
-                    action=self.action, verbose=self.verbose
-                ).get_info(encryption_key=self.encryption_key)
+                ret_msg = microhard_service.get_info(encryption_key=self.encryption_key)
             else:
                 ret_msg = "Failed to update parameters."
 
         elif self.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
-            ret_status, _ = MicrohardService(
-                action=self.action, verbose=self.verbose
-            ).send_commands(
+            ret_status, _ = microhard_service.send_commands(
                 password=self.encryption_key,
                 at_commands=[
                     f"AT+MSPWD={self.new_encryption_key},{self.new_encryption_key}"
@@ -152,6 +157,12 @@ if __name__ == "__main__":
             help="The transmission power (in dBm) for the Microhard radio.",
         )
         parser.add_argument(
+            "--monark_id",
+            type=int,
+            default=DEFAULT_ID,
+            help="ID of the drone 1-255 which controls the IP of the microhard slave radio.",
+        )
+        parser.add_argument(
             "--frequency",
             type=int,
             default=0,
@@ -173,6 +184,7 @@ if __name__ == "__main__":
             new_encryption_key=args.new_encryption_key,
             tx_power=args.tx_power,
             frequency=args.frequency,
+            monark_id=args.monark_id,
             verbose=args.verbose,
         )
 

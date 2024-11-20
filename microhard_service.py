@@ -3,6 +3,7 @@ import os
 import time
 from constants import (
     DEFAULT_ID,
+    MAX_MONARK_ID,
     MICROHARD_DEFAULT_IP,
     MICROHARD_DEFAULT_PASSWORD,
     MICROHARD_IP_PREFIX,
@@ -19,20 +20,27 @@ from functools import cached_property
 
 
 class MicrohardService:
-    def __init__(self, action: str, verbose: bool = False) -> None:
+    def __init__(
+        self, action: str, verbose: bool = False, monark_id: int = DEFAULT_ID
+    ) -> None:
         # Set up the SSH client
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.monark_id = DEFAULT_ID
+        self.monark_id = monark_id
         self.action = action
         self.verbose = verbose
 
-        # The MONARK ID is set from the factory install and is between 1-255 (mavlink limit)
-        if not os.path.exists(MONARK_ID_FILE_PATH):
-            raise FileNotFoundError("MONARK ID file not found.")
-        else:
-            with open(MONARK_ID_FILE_PATH, "r") as file:
-                self.monark_id = int(file.readline().strip())
+        # The MONARK ID is set from the factory install and is between 1-255 (mavlink limit).
+        # However, it can be overwritten by the user in the command line argument.
+        if monark_id == DEFAULT_ID:
+            if not os.path.exists(MONARK_ID_FILE_PATH):
+                raise FileNotFoundError("MONARK ID file not found.")
+            else:
+                with open(MONARK_ID_FILE_PATH, "r") as file:
+                    self.monark_id = int(file.readline().strip())
+
+        if self.monark_id < 0 or self.monark_id > MAX_MONARK_ID:
+            raise Exception(f"MONARK ID must be between 1 and {MAX_MONARK_ID}.")
 
         if self.verbose:
             print(f"MONARK ID: {self.monark_id}")

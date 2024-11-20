@@ -10,6 +10,7 @@ MICROHARD_USER: Final = "admin"
 MICROHARD_DEFAULT_PASSWORD: Final = "admin"
 MICROHARD_DEFAULT_IP: Final = "192.168.168.1"
 MICROHARD_IP_PREFIX: Final = "172.20.2"
+MAX_MONARK_ID: Final = 255
 
 
 class ActionTypes(Enum):

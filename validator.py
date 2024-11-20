@@ -30,7 +30,7 @@ class Validator:
             )
         elif self.args.action == ActionTypes.UPDATE.value:
             return self.all_fields_truthy(["encryption_key"]) and self.one_field_truthy(
-                ["network_id", "tx_power", "frequency"]
+                ["network_id", "tx_power", "frequency", "monark_id"]
             )
         elif self.args.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
             return self.all_fields_truthy(["encryption_key", "new_encryption_key"])
