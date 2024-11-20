@@ -15,6 +15,6 @@ Update tx power
 Update encryption key
     python monark.py --action=update --encryption_key="echomavechomav" --new_encryption_key="echomavechomav1"
 Update monark id
-    python monark.py --action=update --encryption_key="echomavechomav" --new_encryption_key="echomavechomav1"
+    python monark.py --action=update --encryption_key="echomavechomav" --monark_id="1"
 MicrohardService(action='pair', verbose=True).pair_monark('MONARK-123', 'admin', 15, 2310)
 """
