@@ -23,6 +23,7 @@ class Validator:
         self.validate_encryption_key(
             str(self.args.encryption_key), str(self.args.new_encryption_key)
         )
+        self.validate_monark_id(int(self.args.monark_id))
 
         if self.args.action == ActionTypes.PAIR.value:
             return self.all_fields_truthy(
@@ -30,7 +31,7 @@ class Validator:
             )
         elif self.args.action == ActionTypes.UPDATE.value:
             return self.all_fields_truthy(["encryption_key"]) and self.one_field_truthy(
-                ["network_id", "tx_power", "frequency", "monark_id"]
+                ["network_id", "tx_power", "frequency"]
             )
         elif self.args.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
             return self.all_fields_truthy(["encryption_key", "new_encryption_key"])
@@ -54,6 +55,13 @@ class Validator:
         if new_encryption_key and not len(new_encryption_key) >= 8:
             raise ValueError(f"New encryption key must be at least 8 characters long")
         return True
+
+    def validate_monark_id(self, monark_id: int) -> bool:
+        if monark_id == 0:
+            return True
+        if monark_id >= 1 and monark_id <= 255:
+            return True
+        raise ValueError(f"Monark ID must be between 1 and 255")
 
     def all_fields_truthy(self, field_names: List[str]) -> bool:
         if not all([bool(getattr(self.args, arg)) for arg in field_names]):

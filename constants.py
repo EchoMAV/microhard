@@ -23,3 +23,4 @@ class ActionTypes(Enum):
     INFO = "info"
     UPDATE = "update"
     UPDATE_ENCRYPTION_KEY = "update_encryption_key"
+    IS_FACTORY = "is_factory"

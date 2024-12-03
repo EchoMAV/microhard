@@ -70,9 +70,14 @@ class MONARK:
             ret_status = True
         elif self.action == ActionTypes.INFO.value:
             ret_msg = MicrohardService(
-                action=self.action, verbose=self.verbose
+                action=self.action, verbose=self.verbose, monark_id=self.monark_id
             ).get_info(encryption_key=self.encryption_key)
             ret_status = bool(ret_msg)
+        elif self.action == ActionTypes.IS_FACTORY.value:
+            ret_status = MicrohardService(
+                action=self.action, verbose=self.verbose, monark_id=self.monark_id
+            ).is_default_microhard
+            ret_msg = OK
         elif self.action == ActionTypes.UPDATE.value:
             _at_commands = []
             ret_status = True
@@ -86,10 +91,6 @@ class MONARK:
                 _at_commands.append(f"AT+MWFREQ={self.frequency}")
             if self.network_id:
                 _at_commands.append(f"AT+MWNETWORKID={self.network_id}")
-            if self.monark_id != DEFAULT_ID:
-                _at_commands.append(
-                    f"AT+MNLAN=LAN,EDIT,0,{microhard_service.paired_microhard_ip},255.255.0.0,0"
-                )
 
             if _at_commands:
                 _at_commands.append("AT&W")

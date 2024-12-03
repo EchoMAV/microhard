@@ -26,7 +26,7 @@ class MicrohardService:
         # Set up the SSH client
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.monark_id = monark_id
+        self.monark_id = int(monark_id)
         self.action = action
         self.verbose = verbose
 
@@ -57,7 +57,7 @@ class MicrohardService:
         """
         The current microhard radio IP (i.e. default or provisioned)
         """
-        if self._is_default_microhard():
+        if self.is_default_microhard:
             ip = MICROHARD_DEFAULT_IP
         else:
             ip = self.paired_microhard_ip
@@ -67,7 +67,8 @@ class MicrohardService:
 
         return ip
 
-    def _is_default_microhard(self) -> bool:
+    @cached_property
+    def is_default_microhard(self) -> bool:
         """
         Return True if 192.168.168.1 can be pinged
         """
@@ -77,11 +78,13 @@ class MicrohardService:
                 ["ping", "-c", "1", "-W", "200", MICROHARD_DEFAULT_IP],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                timeout=0.75,
             )
             # Check if the ping was successful
             return output.returncode == 0
         except Exception as e:
-            print(f"Error: {e}")
+            if self.verbose:
+                print(f"Error: {e}")
         return False
 
     def pair_monark(
@@ -109,9 +112,7 @@ class MicrohardService:
         ]
 
         _password = (
-            MICROHARD_DEFAULT_PASSWORD
-            if self._is_default_microhard()
-            else encryption_key
+            MICROHARD_DEFAULT_PASSWORD if self.is_default_microhard else encryption_key
         )
 
         is_success, responses = self.send_commands(
@@ -131,7 +132,7 @@ class MicrohardService:
 
     def get_info(self, encryption_key: str) -> dict:
         """
-        Returns "{tx_power},{frequency},{monark_id}"
+        Returns tx_power, frequency, and monark_id in json format.
         If any of the AT commands fail then it will return error.
         """
         at_commands = [

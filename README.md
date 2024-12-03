@@ -1,7 +1,8 @@
 # MONARK_Management
 
 ## Description
-This repo contains code which manages the provisioning and management of MONARK drones via USB-C connection from the GCS. The command suite is designed to interface with Microhard radios on the MONARK through 'AT' commands.
+This repo contains code which runs on the RPi on the MONARK and communicates with the onboard Microhard radio over SSH. Generally speaking, information is extracted from the Microhard module via AT commands and processed in python.
 
 ## Design
-`GCSSerialListener` runs as a service on the RPi. It continually listens for incoming serial data on `SERIAL_PATH`. The incoming data is then parsed and handled by `MicrohardService`.
+For pairing, EchoMAV QGC will invoke commands via the command line which in turn translates into AT commands over SSH into the Microhard.
+For RSSI signaling, a service gets setup on the RPi which periodically sends `RADIO_STATUS` mavlink messages which a GCS like ATAK can ingest and render meaningfully to the user.
