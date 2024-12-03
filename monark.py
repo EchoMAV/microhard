@@ -2,7 +2,15 @@ import argparse
 import os
 import sys
 import subprocess
-from constants import DEFAULT_ID, FAILURE, OK, PAIR_STATUS_FILE_PATH, ActionTypes
+from constants import (
+    DEFAULT_ID,
+    FAILURE,
+    NO,
+    OK,
+    PAIR_STATUS_FILE_PATH,
+    YES,
+    ActionTypes,
+)
 from microhard_service import MicrohardService
 from validator import Validator
 
@@ -77,7 +85,7 @@ class MONARK:
             ret_status = MicrohardService(
                 action=self.action, verbose=self.verbose, monark_id=self.monark_id
             ).is_default_microhard
-            ret_msg = OK
+            ret_msg = YES if ret_status else NO
         elif self.action == ActionTypes.UPDATE.value:
             _at_commands = []
             ret_status = True

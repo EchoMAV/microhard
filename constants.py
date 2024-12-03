@@ -2,6 +2,8 @@ from typing import Final
 from enum import Enum
 
 OK: Final = "OK"
+YES: Final = "YES"
+NO: Final = "NO"
 FAILURE: Final = "FAILURE"
 DEFAULT_ID: Final = 0
 MONARK_ID_FILE_PATH: Final = "monark_id.txt"  # TODO change this later during deploy
