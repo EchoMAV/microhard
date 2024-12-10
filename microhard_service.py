@@ -8,7 +8,7 @@ from constants import (
     MICROHARD_DEFAULT_PASSWORD,
     MICROHARD_IP_PREFIX,
     MICROHARD_USER,
-    MONARK_ID_FILE_PATH,
+    MONARK_ID_FILE_NAME,
     OK,
     PAIR_STATUS_FILE_PATH,
     ActionTypes,
@@ -33,10 +33,10 @@ class MicrohardService:
         # The MONARK ID is set from the factory install and is between 1-255 (mavlink limit).
         # However, it can be overwritten by the user in the command line argument.
         if monark_id == DEFAULT_ID:
-            if not os.path.exists(MONARK_ID_FILE_PATH):
+            if not os.path.exists(MONARK_ID_FILE_NAME):
                 raise FileNotFoundError("MONARK ID file not found.")
             else:
-                with open(MONARK_ID_FILE_PATH, "r") as file:
+                with open(MONARK_ID_FILE_NAME, "r") as file:
                     self.monark_id = int(file.readline().strip())
 
         if self.monark_id < 0 or self.monark_id > MAX_MONARK_ID:

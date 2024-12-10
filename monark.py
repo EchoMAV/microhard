@@ -12,6 +12,7 @@ from constants import (
     ActionTypes,
 )
 from microhard_service import MicrohardService
+from sd_card_service import SDCardService
 from validator import Validator
 
 
@@ -86,6 +87,9 @@ class MONARK:
                 action=self.action, verbose=self.verbose, monark_id=self.monark_id
             ).is_default_microhard
             ret_msg = YES if ret_status else NO
+        elif self.action == ActionTypes.MONITOR_SD_CARD.value:
+            # this is an infinite loop
+            SDCardService().run()
         elif self.action == ActionTypes.UPDATE.value:
             _at_commands = []
             ret_status = True
