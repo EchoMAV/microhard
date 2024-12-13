@@ -1,0 +1,8 @@
+Package: microhard
+Version: 1.1
+Section: network
+Priority: important
+Architecture: arm64
+Depends: python3-paramiko
+Maintainer: MONARK monark@echomav.com
+Description: microhard will perform AT commands on a local microhard radio over ssh.

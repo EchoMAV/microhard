@@ -1,9 +1,11 @@
 # The below are sample commands to run the monark.py script:
 """
+Determine whether the microhard is in factory mode
+    python monark.py --action=is_factory
 Get info about the microhard default radio
     python monark.py --action=info --encryption_key="admin"
 Start the pairing process
-    python monark.py --action=pair --network_id="MONARK-123" --encryption_key="echomavechomav" --tx_power=15 --frequency=2311
+    python monark.py --action=pair --network_id="MONARK-123" --encryption_key="echomavechomav" --tx_power=15 --frequency=2310 --monark_id="2"
 Get the status on the pairing process
     python monark.py --action=pair_status
 Get info after the pairing
