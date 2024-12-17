@@ -1,4 +1,8 @@
 *.vscode
 *__pycache__
+<<<<<<< HEAD
 private-key*
+=======
+private_key*
+>>>>>>> 2b5620bbab354fcdb8915bd7c305f70a6ceb3db2
 *sha256
