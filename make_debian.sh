@@ -6,7 +6,7 @@ set -e
 PACKAGE_NAME="microhard"
 SUDO=$(test ${EUID} -ne 0 && which sudo)
 
-$SUDO apt install -y dpkg
+$SUDO apt install -y python3-paramiko dpkg
 
 cd $PACKAGE_NAME
 $SUDO cp usr/lib/python3.11/dist-packages/$PACKAGE_NAME/$PACKAGE_NAME.py usr/bin/$PACKAGE_NAME
