@@ -1,6 +1,7 @@
 from typing import Any, List, Optional
 
-from constants import ActionTypes
+from constants import ENCRYPTION_KEY, NEW_ENCRYPTION_KEY, ActionTypes
+import os
 
 
 class Validator:
@@ -20,9 +21,7 @@ class Validator:
             raise ValueError("No arguments provided")
 
         self.validate_action(str(self.args.action))
-        self.validate_encryption_key(
-            str(self.args.encryption_key), str(self.args.new_encryption_key)
-        )
+        self.validate_encryption_key()
         self.validate_monark_id(int(self.args.monark_id))
 
         if self.args.action == ActionTypes.PAIR.value:
@@ -44,9 +43,9 @@ class Validator:
             raise ValueError(f"{action} not in {supported_actions}")
         return True
 
-    def validate_encryption_key(
-        self, encryption_key: str, new_encryption_key: str
-    ) -> bool:
+    def validate_encryption_key(self) -> bool:
+        encryption_key = os.environ.get(ENCRYPTION_KEY, "")
+        new_encryption_key = os.environ.get(NEW_ENCRYPTION_KEY, "")
         is_default_encryption_key = encryption_key == "admin"
         if is_default_encryption_key:
             return True
@@ -64,6 +63,10 @@ class Validator:
         raise ValueError(f"Monark ID must be between 1 and 255")
 
     def all_fields_truthy(self, field_names: List[str]) -> bool:
+        if "encryption_key" in field_names:
+            field_names.remove("encryption_key")
+            if not os.environ.get(ENCRYPTION_KEY, ""):
+                raise ValueError("Missing encryption key")
         if not all([bool(getattr(self.args, arg)) for arg in field_names]):
             raise ValueError(f"Missing fields: {field_names}")
         return True

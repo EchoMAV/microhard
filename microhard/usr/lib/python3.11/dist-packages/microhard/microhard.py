@@ -9,7 +9,9 @@ import argparse
 import subprocess
 from constants import (
     DEFAULT_ID,
+    ENCRYPTION_KEY,
     FAILURE,
+    NEW_ENCRYPTION_KEY,
     NO,
     OK,
     PAIR_STATUS_FILE_PATH,
@@ -25,8 +27,6 @@ class Microhard:
         self,
         action: str,
         network_id: str,
-        encryption_key: str,
-        new_encryption_key: str,
         tx_power: int,
         frequency: int,
         monark_id: int,
@@ -34,8 +34,8 @@ class Microhard:
     ) -> None:
         self.action = action
         self.network_id = network_id
-        self.encryption_key = encryption_key
-        self.new_encryption_key = new_encryption_key
+        self.encryption_key = os.environ.get(ENCRYPTION_KEY, "")
+        self.new_encryption_key = os.environ.get(NEW_ENCRYPTION_KEY, "")
         self.tx_power = tx_power
         self.frequency = frequency
         self.monark_id = monark_id
@@ -153,18 +153,6 @@ def main():
             help="The network ID for the Microhard radio.",
         )
         parser.add_argument(
-            "--encryption_key",
-            type=str,
-            default="",
-            help="The encryption key for the Microhard radio.",
-        )
-        parser.add_argument(
-            "--new_encryption_key",
-            type=str,
-            default="",
-            help="The new encryption key for the Microhard radio.",
-        )
-        parser.add_argument(
             "--tx_power",
             type=int,
             default=0,
@@ -194,8 +182,6 @@ def main():
         monark = Microhard(
             action=args.action,
             network_id=args.network_id,
-            encryption_key=args.encryption_key,
-            new_encryption_key=args.new_encryption_key,
             tx_power=args.tx_power,
             frequency=args.frequency,
             monark_id=args.monark_id,
