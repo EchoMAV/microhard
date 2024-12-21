@@ -30,7 +30,7 @@ class MicrohardService:
         self.action = action
         self.verbose = verbose
 
-        # The MONARK ID is set from the factory install and is between 1-255 (mavlink limit).
+        # The MONARK ID is set during pairing. It's value is 1-255. Default unpaired value is 0.
         # However, it can be overwritten by the user in the command line argument.
         if monark_id == DEFAULT_ID:
             if not os.path.exists(MONARK_ID_FILE_NAME):
