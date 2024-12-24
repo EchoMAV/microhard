@@ -2,7 +2,6 @@ from typing import List, Tuple
 import os
 import time
 from constants import (
-    DEFAULT_ID,
     MAX_MONARK_ID,
     MICROHARD_DEFAULT_IP,
     MICROHARD_DEFAULT_PASSWORD,
@@ -20,9 +19,7 @@ from functools import cached_property
 
 
 class MicrohardService:
-    def __init__(
-        self, action: str, verbose: bool = False, monark_id: int = DEFAULT_ID
-    ) -> None:
+    def __init__(self, action: str, monark_id: int, verbose: bool = False) -> None:
         # Set up the SSH client
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -30,14 +27,13 @@ class MicrohardService:
         self.action = action
         self.verbose = verbose
 
-        # The MONARK ID is set during pairing. It's value is 1-255. Default unpaired value is 0.
-        # However, it can be overwritten by the user in the command line argument.
-        if monark_id == DEFAULT_ID:
-            if not os.path.exists(MONARK_ID_FILE_NAME):
-                raise FileNotFoundError("MONARK ID file not found.")
-            else:
-                with open(MONARK_ID_FILE_NAME, "r") as file:
-                    self.monark_id = int(file.readline().strip())
+        # The MONARK ID is set every time this service is invoked. It's value is 1-255.
+        if not os.path.exists(MONARK_ID_FILE_NAME):
+            os.makedirs(os.path.dirname(MONARK_ID_FILE_NAME), exist_ok=True)
+            print("MONARK ID file not found- creating it now.")
+        else:
+            with open(MONARK_ID_FILE_NAME, "w") as file:
+                file.write(str(self.monark_id))
 
         if self.monark_id < 0 or self.monark_id > MAX_MONARK_ID:
             raise Exception(f"MONARK ID must be between 1 and {MAX_MONARK_ID}.")

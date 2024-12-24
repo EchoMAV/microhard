@@ -26,14 +26,16 @@ class Validator:
 
         if self.args.action == ActionTypes.PAIR.value:
             return self.all_fields_truthy(
-                ["network_id", "encryption_key", "tx_power", "frequency"]
+                ["network_id", "encryption_key", "tx_power", "frequency", "monark_id"]
             )
         elif self.args.action == ActionTypes.UPDATE.value:
-            return self.all_fields_truthy(["encryption_key"]) and self.one_field_truthy(
-                ["network_id", "tx_power", "frequency"]
-            )
+            return self.all_fields_truthy(
+                ["encryption_key", "monark_id"]
+            ) and self.one_field_truthy(["network_id", "tx_power", "frequency"])
         elif self.args.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
-            return self.all_fields_truthy(["encryption_key", "new_encryption_key"])
+            return self.all_fields_truthy(
+                ["encryption_key", "new_encryption_key", "monark_id"]
+            )
         else:
             return bool(self.args.action)
 
