@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from typing import Any, List, Optional
 
 from constants import ENCRYPTION_KEY, NEW_ENCRYPTION_KEY, ActionTypes

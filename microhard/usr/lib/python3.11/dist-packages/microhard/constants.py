@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from typing import Final
 from enum import Enum
 
