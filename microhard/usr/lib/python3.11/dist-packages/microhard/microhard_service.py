@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 from typing import List, Tuple
-import os
 import time
 from constants import (
-    MAX_MONARK_ID,
     MICROHARD_DEFAULT_IP,
     MICROHARD_DEFAULT_PASSWORD,
     MICROHARD_IP_PREFIX,
     MICROHARD_USER,
-    MONARK_ID_FILE_NAME,
     OK,
     PAIR_STATUS_FILE_PATH,
     ActionTypes,
@@ -27,20 +24,6 @@ class MicrohardService:
         self.monark_id = int(monark_id)
         self.action = action
         self.verbose = verbose
-
-        # The MONARK ID is set every time this service is invoked. It's value is 1-255.
-        if not os.path.exists(MONARK_ID_FILE_NAME):
-            os.makedirs(os.path.dirname(MONARK_ID_FILE_NAME), exist_ok=True)
-            print("MONARK ID file not found- creating it now.")
-        else:
-            with open(MONARK_ID_FILE_NAME, "w") as file:
-                file.write(str(self.monark_id))
-
-        if self.monark_id < 0 or self.monark_id > MAX_MONARK_ID:
-            raise Exception(f"MONARK ID must be between 1 and {MAX_MONARK_ID}.")
-
-        if self.verbose:
-            print(f"MONARK ID: {self.monark_id}")
 
     @cached_property
     def paired_microhard_ip(self) -> str:

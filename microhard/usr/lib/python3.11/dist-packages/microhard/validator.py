@@ -32,7 +32,9 @@ class Validator:
         elif self.args.action == ActionTypes.UPDATE.value:
             return self.all_fields_truthy(
                 ["encryption_key", "monark_id"]
-            ) and self.one_field_truthy(["network_id", "tx_power", "frequency"])
+            ) and self.one_field_truthy(
+                ["network_id", "tx_power", "frequency", "monark_id"]
+            )
         elif self.args.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
             return self.all_fields_truthy(
                 ["encryption_key", "new_encryption_key", "monark_id"]
@@ -59,9 +61,7 @@ class Validator:
         return True
 
     def validate_monark_id(self, monark_id: int) -> bool:
-        if monark_id == 0:
-            return True
-        if monark_id >= 1 and monark_id <= 255:
+        if monark_id >= 0 and monark_id <= 255:
             return True
         raise ValueError(f"Monark ID must be between 1 and 255")
 
@@ -69,7 +69,7 @@ class Validator:
         if "encryption_key" in field_names:
             field_names.remove("encryption_key")
             if not os.environ.get(ENCRYPTION_KEY, ""):
-                raise ValueError("Missing encryption key")
+                raise ValueError("Missing ENCRYPTION_KEY env var.")
         if not all([bool(getattr(self.args, arg)) for arg in field_names]):
             raise ValueError(f"Missing fields: {field_names}")
         return True

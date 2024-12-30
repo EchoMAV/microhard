@@ -8,9 +8,10 @@ sys.path.insert(0, "/usr/lib/python3.11/dist-packages/microhard/")
 import argparse
 import subprocess
 from constants import (
-    DEFAULT_ID,
     ENCRYPTION_KEY,
     FAILURE,
+    MAX_MONARK_ID,
+    MONARK_ID_FILE_NAME,
     NEW_ENCRYPTION_KEY,
     NO,
     OK,
@@ -41,6 +42,17 @@ class Microhard:
         self.monark_id = monark_id
         self.verbose = verbose
 
+        # The MONARK ID is saved every time this service is invoked. It's value is 1-255.
+        if not os.path.exists(MONARK_ID_FILE_NAME):
+            print("MONARK ID file not found- creating it now.")
+            os.makedirs(os.path.dirname(MONARK_ID_FILE_NAME), exist_ok=True)
+
+        with open(MONARK_ID_FILE_NAME, "w") as file:
+            file.write(str(self.monark_id))
+
+        if self.verbose:
+            print(f"MONARK ID: {self.monark_id}")
+
     def run(self):
         ret_msg = "Error."
         ret_status = False
@@ -63,11 +75,12 @@ class Microhard:
                         ret_msg = "Pairing is in progress. Please check status."
 
             if not pairing_in_progress:
+                command = f"from microhard_service import MicrohardService; MicrohardService(action='pair', verbose={self.verbose}, monark_id={self.monark_id}).pair_monark('{self.network_id}', '{self.encryption_key}', {int(self.tx_power)}, {int(self.frequency)})"
                 subprocess.Popen(
                     [
                         "python",
                         "-c",
-                        f"from microhard_service import MicrohardService; MicrohardService(action='pair', verbose={self.verbose}, monark_id={self.monark_id}).pair_monark('{self.network_id}', '{self.encryption_key}', {int(self.tx_power)}, {int(self.frequency)})",
+                        command,
                     ],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
@@ -161,7 +174,7 @@ def main():
         parser.add_argument(
             "--monark_id",
             type=int,
-            default=DEFAULT_ID,
+            required=True,
             help="ID of the drone 1-255 which controls the IP of the microhard slave radio.",
         )
         parser.add_argument(

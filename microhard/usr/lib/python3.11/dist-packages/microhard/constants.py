@@ -6,7 +6,6 @@ OK: Final = "OK"
 YES: Final = "YES"
 NO: Final = "NO"
 FAILURE: Final = "FAILURE"
-DEFAULT_ID: Final = 0
 MONARK_ID_FILE_NAME: Final = "/usr/local/echopilot/monarkProxy/monark_id.txt"
 PAIR_STATUS_FILE_PATH: Final = "/tmp/pair_status.txt"  # used so that the microhard service can check the status of the microhard (also serves as lockfile)
 MICROHARD_USER: Final = "admin"
