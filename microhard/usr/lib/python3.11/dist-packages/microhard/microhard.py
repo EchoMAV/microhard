@@ -10,12 +10,10 @@ import subprocess
 from constants import (
     ENCRYPTION_KEY,
     FAILURE,
-    MAX_MONARK_ID,
     MONARK_ID_FILE_NAME,
     NEW_ENCRYPTION_KEY,
     NO,
     OK,
-    PAIR_STATUS_FILE_PATH,
     YES,
     ActionTypes,
 )
@@ -35,8 +33,8 @@ class Microhard:
     ) -> None:
         self.action = action
         self.network_id = network_id
-        self.encryption_key = os.environ.get(ENCRYPTION_KEY, "")
-        self.new_encryption_key = os.environ.get(NEW_ENCRYPTION_KEY, "")
+        self.encryption_key = os.environ.get(ENCRYPTION_KEY, "").strip()
+        self.new_encryption_key = os.environ.get(NEW_ENCRYPTION_KEY, "").strip()
         self.tx_power = tx_power
         self.frequency = frequency
         self.monark_id = monark_id
@@ -58,42 +56,17 @@ class Microhard:
         ret_status = False
 
         if self.action == ActionTypes.PAIR.value:
-            pairing_in_progress = False
-            # since the pairing process is asynchronous, we use a file to track state
-            if os.path.exists(PAIR_STATUS_FILE_PATH):
-                with open(PAIR_STATUS_FILE_PATH, "r") as file:
-                    data = file.readline().strip()
-                    if data.startswith(OK):
-                        ret_msg = "Pairing was successful."
-                    elif data.startswith(FAILURE):
-                        if self.verbose:
-                            ret_msg = data
-                        else:
-                            ret_msg = "Pairing was not successful."
-                    else:
-                        pairing_in_progress = True
-                        ret_msg = "Pairing is in progress. Please check status."
-
-            if not pairing_in_progress:
-                command = f"from microhard_service import MicrohardService; MicrohardService(action='pair', verbose={self.verbose}, monark_id={self.monark_id}).pair_monark('{self.network_id}', '{self.encryption_key}', {int(self.tx_power)}, {int(self.frequency)})"
-                subprocess.Popen(
-                    [
-                        "python",
-                        "-c",
-                        command,
-                    ],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-                ret_msg = "Pairing has started."
-                ret_status = True
-        elif self.action == ActionTypes.PAIR_STATUS.value:
-            if os.path.exists(PAIR_STATUS_FILE_PATH):
-                with open(PAIR_STATUS_FILE_PATH, "r") as file:
-                    ret_msg = file.readline().strip()
-            else:
-                ret_msg = "Pairing is not in progress."
-            ret_status = True
+            ret_status, responses = MicrohardService(
+                action="pair", monark_id=self.monark_id, verbose=self.verbose
+            ).pair_monark(
+                network_id=self.network_id,
+                encryption_key=self.encryption_key,
+                tx_power=self.tx_power,
+                frequency=self.frequency,
+            )
+            if self.verbose:
+                print(f"Microhard pair responses: {responses}")
+            ret_msg = "Pairing is successful." if ret_status else "Pairing failed."
         elif self.action == ActionTypes.INFO.value:
             ret_msg = MicrohardService(
                 action=self.action, verbose=self.verbose, monark_id=self.monark_id

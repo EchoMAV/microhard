@@ -7,7 +7,6 @@ from constants import (
     MICROHARD_IP_PREFIX,
     MICROHARD_USER,
     OK,
-    PAIR_STATUS_FILE_PATH,
     ActionTypes,
 )
 import fcntl
@@ -74,16 +73,13 @@ class MicrohardService:
         tx_power: int,
         frequency: int,
     ) -> Tuple[bool, List[str]]:
-        # create the pairing status file
-        with open(PAIR_STATUS_FILE_PATH, "w") as _:
-            pass
-
         at_commands = [
             f"AT+MWRADIO=1",  # turn on radio
             f"AT+MWVMODE=1",  # slave mode
             f"AT+MWTXPOWER={tx_power}",
             f"AT+MWNETWORKID={network_id}",
             f"AT+MWFREQ={frequency}",
+            f"AT+MWDISTANCE=8047",  # 5 miles
             f"AT+MWVENCRYPT=2,{encryption_key}",
             f"AT+MSPWD={encryption_key},{encryption_key}",
             f"AT+MNLAN=LAN,EDIT,0,{self.paired_microhard_ip},255.255.0.0,0",  # the target paired IP
@@ -100,13 +96,6 @@ class MicrohardService:
             password=_password,
             at_commands=at_commands,
         )
-
-        if is_success:
-            with open(PAIR_STATUS_FILE_PATH, "w") as file:
-                file.write(OK)
-        else:
-            with open(PAIR_STATUS_FILE_PATH, "w") as file:
-                file.write(f"FAILURE: {responses}")
 
         return is_success, responses
 
@@ -178,16 +167,6 @@ class MicrohardService:
 
                 if self.verbose:
                     print(f"Running command {_status}")
-
-                if self.action == ActionTypes.PAIR.value:
-                    with open(PAIR_STATUS_FILE_PATH, "w") as file:
-                        # Acquire an exclusive lock
-                        fcntl.flock(file, fcntl.LOCK_EX)
-                        try:
-                            file.write(_status + "\n")
-                        finally:
-                            # Release the lock
-                            fcntl.flock(file, fcntl.LOCK_UN)
 
                 shell.send(command + "\n")
                 time.sleep(0.1)

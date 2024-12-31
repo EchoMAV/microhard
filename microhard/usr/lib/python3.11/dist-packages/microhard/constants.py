@@ -7,7 +7,6 @@ YES: Final = "YES"
 NO: Final = "NO"
 FAILURE: Final = "FAILURE"
 MONARK_ID_FILE_NAME: Final = "/usr/local/echopilot/monarkProxy/monark_id.txt"
-PAIR_STATUS_FILE_PATH: Final = "/tmp/pair_status.txt"  # used so that the microhard service can check the status of the microhard (also serves as lockfile)
 MICROHARD_USER: Final = "admin"
 MICROHARD_DEFAULT_PASSWORD: Final = "admin"
 MICROHARD_DEFAULT_IP: Final = "192.168.168.1"
@@ -23,7 +22,6 @@ class ActionTypes(Enum):
     """
 
     PAIR = "pair"
-    PAIR_STATUS = "pair_status"
     INFO = "info"
     UPDATE = "update"
     UPDATE_ENCRYPTION_KEY = "update_encryption_key"
