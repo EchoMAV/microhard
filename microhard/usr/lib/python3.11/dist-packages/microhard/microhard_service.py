@@ -6,13 +6,11 @@ from constants import (
     MICROHARD_DEFAULT_PASSWORD,
     MICROHARD_IP_PREFIX,
     MICROHARD_USER,
-    OK,
-    ActionTypes,
 )
-import fcntl
 import paramiko
 import subprocess
 from functools import cached_property
+import os
 
 
 class MicrohardService:
@@ -140,6 +138,8 @@ class MicrohardService:
 
             # Connect to the Microhard radio
             try:
+                if os.path.exists("/home/echopilot/.ssh/known_hosts"):
+                    os.remove("/home/echopilot/.ssh/known_hosts")
                 self.client.connect(
                     ip_address, username=MICROHARD_USER, password=password
                 )
