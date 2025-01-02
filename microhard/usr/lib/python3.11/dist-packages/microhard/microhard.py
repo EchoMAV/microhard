@@ -6,10 +6,8 @@ import os
 sys.path.insert(0, "/usr/lib/python3.11/dist-packages/microhard/")
 
 import argparse
-import subprocess
 from constants import (
     ENCRYPTION_KEY,
-    FAILURE,
     MONARK_ID_FILE_NAME,
     NEW_ENCRYPTION_KEY,
     NO,
