@@ -45,6 +45,7 @@ class Microhard:
 
         with open(MONARK_ID_FILE_NAME, "w") as file:
             file.write(str(self.monark_id))
+            os.chmod(MONARK_ID_FILE_NAME, 0o777)
 
         if self.verbose:
             print(f"MONARK ID: {self.monark_id}")
