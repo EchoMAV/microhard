@@ -43,9 +43,9 @@ class Microhard:
             print("MONARK ID file not found- creating it now.")
             os.makedirs(os.path.dirname(MONARK_ID_FILE_NAME), exist_ok=True)
 
+        os.chmod(MONARK_ID_FILE_NAME, 0o777)
         with open(MONARK_ID_FILE_NAME, "w") as file:
             file.write(str(self.monark_id))
-            os.chmod(MONARK_ID_FILE_NAME, 0o777)
 
         if self.verbose:
             print(f"MONARK ID: {self.monark_id}")
