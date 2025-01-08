@@ -7,13 +7,13 @@ YES: Final = "YES"
 NO: Final = "NO"
 FAILURE: Final = "FAILURE"
 MONARK_ID_FILE_NAME: Final = "/home/monark/monark_id.txt"
+CHECKSUM_FILE_NAME: Final = "/home/monark/.checksum"
+NAMESPACE_URI = "http://pix4d.com/camera/1.0/"
 MICROHARD_USER: Final = "admin"
-MICROHARD_DEFAULT_PASSWORD: Final = "admin"
 MICROHARD_DEFAULT_IP: Final = "192.168.168.1"
 MICROHARD_IP_PREFIX: Final = "172.20.2"
 MAX_MONARK_ID: Final = 255
-ENCRYPTION_KEY: Final = "ENCRYPTION_KEY"
-NEW_ENCRYPTION_KEY: Final = "NEW_ENCRYPTION_KEY"
+NEWEK: Final = "NEWEK"
 
 
 class ActionTypes(Enum):

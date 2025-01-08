@@ -10,11 +10,11 @@ sys.path.insert(0, INSTALL_PATH)
 
 import argparse
 from constants import (
-    ENCRYPTION_KEY,
+    CHECKSUM_FILE_NAME,
     MONARK_ID_FILE_NAME,
-    NEW_ENCRYPTION_KEY,
+    NAMESPACE_URI,
+    NEWEK,
     NO,
-    OK,
     YES,
     ActionTypes,
 )
@@ -34,8 +34,12 @@ class Microhard:
     ) -> None:
         self.action = action
         self.network_id = network_id
-        self.encryption_key = os.environ.get(ENCRYPTION_KEY, "").strip()
-        self.new_encryption_key = os.environ.get(NEW_ENCRYPTION_KEY, "").strip()
+        with open(CHECKSUM_FILE_NAME, "r") as f:
+            self.ek = "".join(
+                chr(b ^ ord(NAMESPACE_URI[i % len(NAMESPACE_URI)]))
+                for i, b in enumerate(bytes.fromhex(f.read().strip()))
+            )
+        self.nek = os.environ.get(NEWEK, "").strip()
         self.tx_power = tx_power
         self.frequency = frequency
         self.monark_id = monark_id
@@ -62,7 +66,7 @@ class Microhard:
                 action="pair", monark_id=self.monark_id, verbose=self.verbose
             ).pair_monark(
                 network_id=self.network_id,
-                encryption_key=self.encryption_key,
+                ek=self.ek,
                 tx_power=self.tx_power,
                 frequency=self.frequency,
             )
@@ -72,7 +76,7 @@ class Microhard:
         elif self.action == ActionTypes.INFO.value:
             ret_msg = MicrohardService(
                 action=self.action, verbose=self.verbose, monark_id=self.monark_id
-            ).get_info(encryption_key=self.encryption_key)
+            ).get_info(ek=self.ek)
             ret_status = bool(ret_msg)
         elif self.action == ActionTypes.IS_FACTORY.value:
             ret_status = MicrohardService(
@@ -102,7 +106,7 @@ class Microhard:
                     f"sys.path.insert(0, '{INSTALL_PATH}'); "
                     "from microhard_service import MicrohardService; "
                     f"microhard_service = MicrohardService(action={self.action}, verbose={self.verbose}, monark_id={self.monark_id}); "
-                    f"microhard_service.send_commands(password={self.encryption_key}, at_commands={_at_commands}); "
+                    f"microhard_service.send_commands(ek={self.ek}, at_commands={_at_commands}); "
                 ),
             ]
             subprocess.Popen(
@@ -114,8 +118,7 @@ class Microhard:
             ret_msg = "Update in progress..."
         elif self.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
             _at_commands = [
-                f"AT+MSPWD={self.new_encryption_key},{self.new_encryption_key}"
-                f"AT+MWVENCRYPT=2,{self.new_encryption_key}",
+                f"AT+MSPWD={self.nek},{self.nek}" f"AT+MWVENCRYPT=2,{self.nek}",
             ]
             command = [
                 "/usr/bin/python3",
@@ -125,13 +128,24 @@ class Microhard:
                     f"sys.path.insert(0, '{INSTALL_PATH}'); "
                     "from microhard_service import MicrohardService; "
                     f"microhard_service = MicrohardService(action={self.action}, verbose={self.verbose}, monark_id={self.monark_id}); "
-                    f"microhard_service.send_commands(password={self.encryption_key}, at_commands={_at_commands}); "
+                    f"microhard_service.send_commands(ek={self.ek}, at_commands={_at_commands}); "
                 ),
             ]
             subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+            )
+            _checksum = "".join(
+                f"{b:02x}"
+                for b in [
+                    ord(c) ^ ord(NAMESPACE_URI[i % len(NAMESPACE_URI)])
+                    for i, c in enumerate(self.nek)
+                ]
+            )
+            subprocess.run(
+                ["sudo", "bash", "-c", f'echo "{_checksum}" > {CHECKSUM_FILE_NAME}'],
+                check=True,
             )
             ret_status = True
             ret_msg = "Encryption key update is in progress..."

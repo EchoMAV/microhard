@@ -3,7 +3,6 @@ from typing import List, Tuple
 import time
 from constants import (
     MICROHARD_DEFAULT_IP,
-    MICROHARD_DEFAULT_PASSWORD,
     MICROHARD_IP_PREFIX,
     MICROHARD_USER,
 )
@@ -68,7 +67,7 @@ class MicrohardService:
     def pair_monark(
         self,
         network_id: str,
-        encryption_key: str,
+        ek: str,
         tx_power: int,
         frequency: int,
     ) -> Tuple[bool, List[str]]:
@@ -79,26 +78,24 @@ class MicrohardService:
             f"AT+MWNETWORKID={network_id}",
             f"AT+MWFREQ={frequency}",
             f"AT+MWDISTANCE=8047",  # 5 miles
-            f"AT+MWVENCRYPT=2,{encryption_key}",
-            f"AT+MSPWD={encryption_key},{encryption_key}",
+            f"AT+MWVENCRYPT=2,{ek}",
+            f"AT+MSPWD={ek},{ek}",
             f"AT+MNLAN=LAN,EDIT,0,{self.paired_microhard_ip},255.255.0.0,0",  # the target paired IP
             f"AT+MNLANDHCP=LAN,0",  # disable DHCP server
             "AT&W",  # save and write
         ]
 
-        _password = (
-            MICROHARD_DEFAULT_PASSWORD if self.is_default_microhard else encryption_key
-        )
+        _ek = MICROHARD_USER if self.is_default_microhard else ek
 
         is_success, responses = self.send_commands(
             ip_address=self.active_microhard_ip,  # send to active microhard IP
-            password=_password,
+            ek=_ek,
             at_commands=at_commands,
         )
 
         return is_success, responses
 
-    def get_info(self, encryption_key: str) -> dict:
+    def get_info(self, ek: str) -> dict:
         """
         Returns tx_power, frequency, and monark_id in json format.
         If any of the AT commands fail then it will return error.
@@ -109,7 +106,7 @@ class MicrohardService:
         ]
         is_success, responses = self.send_commands(
             ip_address=self.active_microhard_ip,
-            password=encryption_key,
+            ek=ek,
             at_commands=at_commands,
         )
         if not is_success:
@@ -127,10 +124,10 @@ class MicrohardService:
         }
 
     def send_commands(
-        self, password: str, at_commands: List[str], ip_address: str = ""
+        self, ek: str, at_commands: List[str], ip_address: str = ""
     ) -> Tuple[bool, List[str]]:
         """
-        Runs at_commands one by one on the microhard radio at admin@{ip_address} using the given password.
+        Runs at_commands one by one on the microhard radio at admin@{ip_address} using the given connection info.
         Returns a tuple of (success, responses) where success is a boolean and responses is a list of strings.
         """
         try:
@@ -141,9 +138,7 @@ class MicrohardService:
             try:
                 if os.path.exists("/home/echopilot/.ssh/known_hosts"):
                     os.remove("/home/echopilot/.ssh/known_hosts")
-                self.client.connect(
-                    ip_address, username=MICROHARD_USER, password=password
-                )
+                self.client.connect(ip_address, username=MICROHARD_USER, password=ek)
                 if self.verbose:
                     print(f"Connected to {ip_address}")
             except Exception as e:
