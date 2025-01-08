@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
+import subprocess
 import sys
 import os
+from typing import Final
 
-sys.path.insert(0, "/usr/lib/python3.11/dist-packages/microhard/")
+INSTALL_PATH: Final = "/usr/lib/python3.11/dist-packages/microhard/"
+sys.path.insert(0, INSTALL_PATH)
 
 import argparse
 from constants import (
@@ -79,9 +82,6 @@ class Microhard:
         elif self.action == ActionTypes.UPDATE.value:
             _at_commands = []
             ret_status = True
-            microhard_service = MicrohardService(
-                action=self.action, verbose=self.verbose, monark_id=self.monark_id
-            )
 
             if self.tx_power:
                 _at_commands.append(f"AT+MWTXPOWER={self.tx_power}")
@@ -92,25 +92,49 @@ class Microhard:
 
             if _at_commands:
                 _at_commands.append("AT&W")
-                ret_status, _ = microhard_service.send_commands(
-                    password=self.encryption_key, at_commands=_at_commands
-                )
 
-            if ret_status:
-                ret_msg = microhard_service.get_info(encryption_key=self.encryption_key)
-            else:
-                ret_msg = "Failed to update parameters."
-
-        elif self.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
-            ret_status, _ = microhard_service.send_commands(
-                password=self.encryption_key,
-                at_commands=[
-                    f"AT+MSPWD={self.new_encryption_key},{self.new_encryption_key}"
-                ],
+            # update commands are done async
+            command = [
+                "/usr/bin/python3",
+                "-c",
+                (
+                    "import sys; "
+                    f"sys.path.insert(0, '{INSTALL_PATH}'); "
+                    "from microhard_service import MicrohardService; "
+                    f"microhard_service = MicrohardService(action={self.action}, verbose={self.verbose}, monark_id={self.monark_id}); "
+                    f"microhard_service.send_commands(password={self.encryption_key}, at_commands={_at_commands}); "
+                ),
+            ]
+            subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
             )
-            if ret_status:
-                ret_msg = OK
-
+            ret_status = True
+            ret_msg = "Update in progress..."
+        elif self.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
+            _at_commands = [
+                f"AT+MSPWD={self.new_encryption_key},{self.new_encryption_key}"
+                f"AT+MWVENCRYPT=2,{self.new_encryption_key}",
+            ]
+            command = [
+                "/usr/bin/python3",
+                "-c",
+                (
+                    "import sys; "
+                    f"sys.path.insert(0, '{INSTALL_PATH}'); "
+                    "from microhard_service import MicrohardService; "
+                    f"microhard_service = MicrohardService(action={self.action}, verbose={self.verbose}, monark_id={self.monark_id}); "
+                    f"microhard_service.send_commands(password={self.encryption_key}, at_commands={_at_commands}); "
+                ),
+            ]
+            subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            ret_status = True
+            ret_msg = "Encryption key update is in progress..."
         else:
             raise ValueError(f"Invalid action type {self.action}.")
 

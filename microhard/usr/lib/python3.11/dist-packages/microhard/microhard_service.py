@@ -7,6 +7,7 @@ from constants import (
     MICROHARD_IP_PREFIX,
     MICROHARD_USER,
 )
+from buzzer_service import BuzzerService
 import paramiko
 import subprocess
 from functools import cached_property
@@ -194,6 +195,10 @@ class MicrohardService:
             self.client.close()
             if self.verbose:
                 print("Session closed.")
+
+            if should_continue:
+                BuzzerService().success_beeps()
+
             return should_continue, responses  # should_continue correlates to success
 
         except Exception as e:
