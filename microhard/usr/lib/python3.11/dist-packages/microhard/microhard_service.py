@@ -5,6 +5,7 @@ from constants import (
     MICROHARD_DEFAULT_IP,
     MICROHARD_IP_PREFIX,
     MICROHARD_USER,
+    RSSI_DELAY,
 )
 from buzzer_service import BuzzerService
 import paramiko
@@ -64,6 +65,22 @@ class MicrohardService:
                 print(f"Error: {e}")
         return False
 
+    def rssi_loop(self) -> None:
+        while True:
+            at_commands = [
+                f"AT+MWRSSI",
+            ]
+            is_success, responses = self.send_commands(
+                ip_address=self.active_microhard_ip,
+                ek=MICROHARD_USER,
+                at_commands=at_commands,
+            )
+            if not is_success:
+                print("RSSI command failed.")
+            else:
+                rssi = responses[0].split("MWTXPOWER: ")[1].strip()
+            time.sleep(RSSI_DELAY)
+
     def pair_monark(
         self,
         network_id: str,
@@ -92,6 +109,10 @@ class MicrohardService:
             ek=_ek,
             at_commands=at_commands,
         )
+
+        if is_success:
+            pass
+        # TODO restart the rssi service
 
         return is_success, responses
 

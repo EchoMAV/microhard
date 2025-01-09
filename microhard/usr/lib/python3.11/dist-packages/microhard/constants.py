@@ -14,6 +14,7 @@ MICROHARD_DEFAULT_IP: Final = "192.168.168.1"
 MICROHARD_IP_PREFIX: Final = "172.20.2"
 MAX_MONARK_ID: Final = 255
 NEWEK: Final = "NEWEK"
+RSSI_DELAY: Final = 5
 
 
 class ActionTypes(Enum):
@@ -26,3 +27,4 @@ class ActionTypes(Enum):
     UPDATE = "update"
     UPDATE_ENCRYPTION_KEY = "update_encryption_key"
     IS_FACTORY = "is_factory"
+    RSSI = "rssi"

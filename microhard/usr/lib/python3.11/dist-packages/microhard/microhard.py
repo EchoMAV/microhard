@@ -47,6 +47,8 @@ class Microhard:
 
         # The MONARK ID is saved every time this service is invoked. It's value is 1-255.
         if not os.path.exists(MONARK_ID_FILE_NAME):
+            if self.action == ActionTypes.RSSI.value:
+                raise Exception("MONARK ID must exist for RSSI mode.")
             print("MONARK ID file not found- creating it now.")
             os.makedirs(os.path.dirname(MONARK_ID_FILE_NAME), exist_ok=True)
 
@@ -78,6 +80,10 @@ class Microhard:
                 action=self.action, verbose=self.verbose, monark_id=self.monark_id
             ).get_info(ek=self.ek)
             ret_status = bool(ret_msg)
+        # elif self.action == ActionTypes.RSSI.value:
+        #     ret_msg = MicrohardService(
+        #         action=self.action, verbose=self.verbose, monark_id=self.monark_id
+        #     ).rssi_loop()
         elif self.action == ActionTypes.IS_FACTORY.value:
             ret_status = MicrohardService(
                 action=self.action, verbose=self.verbose, monark_id=self.monark_id
@@ -105,8 +111,8 @@ class Microhard:
                     "import sys; "
                     f"sys.path.insert(0, '{INSTALL_PATH}'); "
                     "from microhard_service import MicrohardService; "
-                    f"microhard_service = MicrohardService(action={self.action}, verbose={self.verbose}, monark_id={self.monark_id}); "
-                    f"microhard_service.send_commands(ek={self.ek}, at_commands={_at_commands}); "
+                    f"microhard_service = MicrohardService(action='{self.action}', verbose={self.verbose}, monark_id={self.monark_id}); "
+                    f"microhard_service.send_commands(ek='{self.ek}', at_commands={_at_commands}); "
                 ),
             ]
             subprocess.Popen(
