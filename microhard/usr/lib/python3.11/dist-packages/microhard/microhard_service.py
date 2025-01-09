@@ -6,6 +6,7 @@ from constants import (
     MICROHARD_IP_PREFIX,
     MICROHARD_USER,
     RSSI_DELAY,
+    ActionTypes,
 )
 from buzzer_service import BuzzerService
 import paramiko
@@ -78,7 +79,9 @@ class MicrohardService:
             if not is_success:
                 print("RSSI command failed.")
             else:
-                rssi = responses[0].split("MWTXPOWER: ")[1].strip()
+                pass
+                # TODO get the rssi and snr and send to mavproxy app
+                # rssi = responses[0].split("MWTXPOWER: ")[1].strip()
             time.sleep(RSSI_DELAY)
 
     def pair_monark(
@@ -212,8 +215,13 @@ class MicrohardService:
             if self.verbose:
                 print("Session closed.")
 
-            if should_continue:
-                BuzzerService().success_beeps()
+            if self.action not in [
+                ActionTypes.INFO.value and ActionTypes.IS_FACTORY.value
+            ]:
+                if should_continue:
+                    BuzzerService().success_beeps()
+                else:
+                    BuzzerService().three_long_failure_beeps()
 
             return should_continue, responses  # should_continue correlates to success
 

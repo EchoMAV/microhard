@@ -3,7 +3,7 @@
 import subprocess
 import sys
 import os
-from typing import Final
+from typing import Any, Final, List
 
 INSTALL_PATH: Final = "/usr/lib/python3.11/dist-packages/microhard/"
 sys.path.insert(0, INSTALL_PATH)
@@ -59,6 +59,19 @@ class Microhard:
         if self.verbose:
             print(f"MONARK ID: {self.monark_id}")
 
+    def _get_background_update_command(self, _at_commands: List[Any]) -> List[Any]:
+        return [
+            "/usr/bin/python3",
+            "-c",
+            (
+                "import sys; "
+                f"sys.path.insert(0, '{INSTALL_PATH}'); "
+                "from microhard_service import MicrohardService; "
+                f"microhard_service = MicrohardService(action={self.action}, verbose={self.verbose}, monark_id={self.monark_id}); "
+                f"microhard_service.send_commands(ek={self.ek}, at_commands={_at_commands}); "
+            ),
+        ]
+
     def run(self):
         ret_msg = "Error."
         ret_status = False
@@ -80,10 +93,10 @@ class Microhard:
                 action=self.action, verbose=self.verbose, monark_id=self.monark_id
             ).get_info(ek=self.ek)
             ret_status = bool(ret_msg)
-        # elif self.action == ActionTypes.RSSI.value:
-        #     ret_msg = MicrohardService(
-        #         action=self.action, verbose=self.verbose, monark_id=self.monark_id
-        #     ).rssi_loop()
+        elif self.action == ActionTypes.RSSI.value:
+            ret_msg = MicrohardService(
+                action=self.action, verbose=self.verbose, monark_id=self.monark_id
+            ).rssi_loop()
         elif self.action == ActionTypes.IS_FACTORY.value:
             ret_status = MicrohardService(
                 action=self.action, verbose=self.verbose, monark_id=self.monark_id
@@ -104,41 +117,25 @@ class Microhard:
                 _at_commands.append("AT&W")
 
             # update commands are done async
-            command = [
-                "/usr/bin/python3",
-                "-c",
-                (
-                    "import sys; "
-                    f"sys.path.insert(0, '{INSTALL_PATH}'); "
-                    "from microhard_service import MicrohardService; "
-                    f"microhard_service = MicrohardService(action='{self.action}', verbose={self.verbose}, monark_id={self.monark_id}); "
-                    f"microhard_service.send_commands(ek='{self.ek}', at_commands={_at_commands}); "
-                ),
-            ]
-            subprocess.Popen(
-                command,
+            if self.frequency:
+                subprocess_func = subprocess.Popen
+            else:
+                subprocess_func = subprocess.run
+            ret = subprocess_func(
+                self._get_background_update_command(_at_commands),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-            ret_status = True
-            ret_msg = "Update in progress..."
+            ret_status = ret.returncode == 0
+            ret_msg = "Update in progress..." if self.frequency else "Done"
         elif self.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
             _at_commands = [
-                f"AT+MSPWD={self.nek},{self.nek}" f"AT+MWVENCRYPT=2,{self.nek}",
-            ]
-            command = [
-                "/usr/bin/python3",
-                "-c",
-                (
-                    "import sys; "
-                    f"sys.path.insert(0, '{INSTALL_PATH}'); "
-                    "from microhard_service import MicrohardService; "
-                    f"microhard_service = MicrohardService(action={self.action}, verbose={self.verbose}, monark_id={self.monark_id}); "
-                    f"microhard_service.send_commands(ek={self.ek}, at_commands={_at_commands}); "
-                ),
+                f"AT+MSPWD={self.nek},{self.nek}",
+                f"AT+MWVENCRYPT=2,{self.nek}",
+                "AT&W",
             ]
             subprocess.Popen(
-                command,
+                self._get_background_update_command(_at_commands),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
@@ -149,10 +146,8 @@ class Microhard:
                     for i, c in enumerate(self.nek)
                 ]
             )
-            subprocess.run(
-                ["sudo", "bash", "-c", f'echo "{_checksum}" > {CHECKSUM_FILE_NAME}'],
-                check=True,
-            )
+            with open(CHECKSUM_FILE_NAME, "w") as c:
+                c.write(_checksum)
             ret_status = True
             ret_msg = "Encryption key update is in progress..."
         else:
