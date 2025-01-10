@@ -118,17 +118,17 @@ class Microhard:
             if _at_commands:
                 _at_commands.append("AT&W")
 
-            # update commands are done async
+            # frequency is done async the others are sync
             if self.frequency:
                 subprocess_func = subprocess.Popen
             else:
                 subprocess_func = subprocess.run
-            ret = subprocess_func(
+            subprocess_func(
                 self._get_background_update_command(_at_commands),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-            ret_status = ret.returncode == 0
+            ret_status = True
             ret_msg = "Update in progress..." if self.frequency else "Done"
         elif self.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
             _at_commands = [
