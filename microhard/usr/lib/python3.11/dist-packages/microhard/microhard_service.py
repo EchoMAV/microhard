@@ -7,12 +7,14 @@ from constants import (
     MICROHARD_USER,
     RSSI_DELAY,
     ActionTypes,
+    SocketCommandType,
 )
 from buzzer_service import BuzzerService
 import paramiko
 import subprocess
 from functools import cached_property
 import os
+from socket_service import SocketService
 
 
 class MicrohardService:
@@ -76,12 +78,14 @@ class MicrohardService:
                 ek=MICROHARD_USER,
                 at_commands=at_commands,
             )
-            if not is_success:
-                print("RSSI command failed.")
-            else:
-                pass
-                # TODO get the rssi and snr and send to mavproxy app
-                # rssi = responses[0].split("MWTXPOWER: ")[1].strip()
+            data = f"{SocketCommandType.RSSI.value} FAILURE {self.monark_id}"
+            try:
+                if is_success:
+                    rssi = responses[0].split(" ")[1].split("OK")[0].strip()
+                    data = f"{SocketCommandType.RSSI.value} {rssi} {self.monark_id}"
+                SocketService.send_data_out(data=data)
+            except Exception as e:
+                print(f"Error parsing RSSI: {e}")
             time.sleep(RSSI_DELAY)
 
     def pair_monark(
@@ -91,6 +95,12 @@ class MicrohardService:
         tx_power: int,
         frequency: int,
     ) -> Tuple[bool, List[str]]:
+        subprocess.run(
+            ["sudo", "systemctl", "stop", "rssi.service"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
         at_commands = [
             f"AT+MWRADIO=1",  # turn on radio
             f"AT+MWVMODE=1",  # slave mode
@@ -113,9 +123,11 @@ class MicrohardService:
             at_commands=at_commands,
         )
 
-        if is_success:
-            pass
-        # TODO restart the rssi service
+        subprocess.run(
+            ["sudo", "systemctl", "start", "rssi.service"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
 
         return is_success, responses
 

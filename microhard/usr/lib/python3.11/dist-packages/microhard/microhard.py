@@ -53,8 +53,9 @@ class Microhard:
             os.makedirs(os.path.dirname(MONARK_ID_FILE_NAME), exist_ok=True)
 
         os.chmod(MONARK_ID_FILE_NAME, 0o777)
-        with open(MONARK_ID_FILE_NAME, "w") as file:
-            file.write(str(self.monark_id))
+        if self.action != ActionTypes.RSSI.value:
+            with open(MONARK_ID_FILE_NAME, "w") as file:
+                file.write(str(self.monark_id))
 
         if self.verbose:
             print(f"MONARK ID: {self.monark_id}")
@@ -94,7 +95,8 @@ class Microhard:
             ).get_info(ek=self.ek)
             ret_status = bool(ret_msg)
         elif self.action == ActionTypes.RSSI.value:
-            ret_msg = MicrohardService(
+            # this is an infinite loop
+            MicrohardService(
                 action=self.action, verbose=self.verbose, monark_id=self.monark_id
             ).rssi_loop()
         elif self.action == ActionTypes.IS_FACTORY.value:
@@ -185,7 +187,7 @@ def main():
         parser.add_argument(
             "--monark_id",
             type=int,
-            required=True,
+            default=0,
             help="ID of the drone 1-255 which controls the IP of the microhard slave radio.",
         )
         parser.add_argument(

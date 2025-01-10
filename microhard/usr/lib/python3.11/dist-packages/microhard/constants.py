@@ -15,6 +15,8 @@ MICROHARD_IP_PREFIX: Final = "172.20.2"
 MAX_MONARK_ID: Final = 255
 NEWEK: Final = "NEWEK"
 RSSI_DELAY: Final = 5
+RSSI_SOCKET_HOST = "localhost"
+RSSI_SOCKET_PORT = 54323
 
 
 class ActionTypes(Enum):
@@ -28,3 +30,7 @@ class ActionTypes(Enum):
     UPDATE_ENCRYPTION_KEY = "update_encryption_key"
     IS_FACTORY = "is_factory"
     RSSI = "rssi"
+
+
+class SocketCommandType(Enum):
+    RSSI = "RSSI"

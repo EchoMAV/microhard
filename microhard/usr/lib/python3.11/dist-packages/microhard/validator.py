@@ -22,6 +22,9 @@ class Validator:
             raise ValueError("No arguments provided")
 
         self.validate_action(str(self.args.action))
+
+        if self.args.action != ActionTypes.RSSI.value:
+            self.args.monark_id = 0
         self.validate_monark_id(int(self.args.monark_id))
 
         if self.args.action == ActionTypes.PAIR.value:
