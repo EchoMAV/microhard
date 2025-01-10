@@ -40,23 +40,21 @@ class MicrohardService:
         """
         if self.is_default_microhard:
             ip = MICROHARD_DEFAULT_IP
-        else:
+        elif self.is_paired_microhard:
             ip = self.paired_microhard_ip
+        else:
+            raise Exception("No active microhard radio found")
 
         if self.verbose:
             print(f"Active MONARK IP: {ip}")
 
         return ip
 
-    @cached_property
-    def is_default_microhard(self) -> bool:
-        """
-        Return True if 192.168.168.1 can be pinged
-        """
+    def _is_active_ip(self, ip: str) -> bool:
         try:
             # Ping the IP address and check for response within 200 ms
             output = subprocess.run(
-                ["ping", "-c", "1", "-W", "200", MICROHARD_DEFAULT_IP],
+                ["ping", "-c", "1", "-W", "200", ip],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 timeout=0.75,
@@ -67,6 +65,20 @@ class MicrohardService:
             if self.verbose:
                 print(f"Error: {e}")
         return False
+
+    @cached_property
+    def is_paired_microhard(self) -> bool:
+        """
+        Return True if 172.20.2.MONARK_ID can be pinged
+        """
+        return self._is_active_ip(self.paired_microhard_ip)
+
+    @cached_property
+    def is_default_microhard(self) -> bool:
+        """
+        Return True if 192.168.168.1 can be pinged
+        """
+        return self._is_active_ip(MICROHARD_DEFAULT_IP)
 
     def rssi_loop(self) -> None:
         while True:
@@ -228,7 +240,9 @@ class MicrohardService:
                 print("Session closed.")
 
             if self.action not in [
-                ActionTypes.INFO.value and ActionTypes.IS_FACTORY.value
+                ActionTypes.INFO.value,
+                ActionTypes.IS_FACTORY.value,
+                ActionTypes.RSSI.value,
             ]:
                 if should_continue:
                     BuzzerService().success_beeps()
