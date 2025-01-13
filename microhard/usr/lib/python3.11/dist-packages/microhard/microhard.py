@@ -68,8 +68,8 @@ class Microhard:
                 "import sys; "
                 f"sys.path.insert(0, '{INSTALL_PATH}'); "
                 "from microhard_service import MicrohardService; "
-                f"microhard_service = MicrohardService(action={self.action}, verbose={self.verbose}, monark_id={self.monark_id}); "
-                f"microhard_service.send_commands(ek={self.ek}, at_commands={_at_commands}); "
+                f"microhard_service = MicrohardService(action='{self.action}', verbose={self.verbose}, monark_id={self.monark_id}); "
+                f"microhard_service.send_commands(ek='{self.ek}', at_commands={_at_commands}); "
             ),
         ]
 
