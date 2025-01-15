@@ -131,27 +131,31 @@ class Microhard:
             ret_status = True
             ret_msg = "Update in progress..." if self.frequency else "Done"
         elif self.action == ActionTypes.UPDATE_ENCRYPTION_KEY.value:
-            _at_commands = [
-                f"AT+MSPWD={self.nek},{self.nek}",
-                f"AT+MWVENCRYPT=2,{self.nek}",
-                "AT&W",
-            ]
-            subprocess.Popen(
-                self._get_background_update_command(_at_commands),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            _checksum = "".join(
-                f"{b:02x}"
-                for b in [
-                    ord(c) ^ ord(NAMESPACE_URI[i % len(NAMESPACE_URI)])
-                    for i, c in enumerate(self.nek)
+            if not self.nek:
+                ret_status = False
+                ret_msg = "NEWEK must be set."
+            else:
+                _at_commands = [
+                    f"AT+MSPWD={self.nek},{self.nek}",
+                    f"AT+MWVENCRYPT=2,{self.nek}",
+                    "AT&W",
                 ]
-            )
-            with open(CHECKSUM_FILE_NAME, "w") as c:
-                c.write(_checksum)
-            ret_status = True
-            ret_msg = "Encryption key update is in progress..."
+                subprocess.Popen(
+                    self._get_background_update_command(_at_commands),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                _checksum = "".join(
+                    f"{b:02x}"
+                    for b in [
+                        ord(c) ^ ord(NAMESPACE_URI[i % len(NAMESPACE_URI)])
+                        for i, c in enumerate(self.nek)
+                    ]
+                )
+                with open(CHECKSUM_FILE_NAME, "w") as c:
+                    c.write(_checksum)
+                ret_status = True
+                ret_msg = "Encryption key update is in progress..."
         else:
             raise ValueError(f"Invalid action type {self.action}.")
 
